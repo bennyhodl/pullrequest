@@ -1,6 +1,7 @@
 use anthropic::{client::ClientBuilder, types::CompleteRequestBuilder, AI_PROMPT, HUMAN_PROMPT};
 use dotenv::dotenv;
 use std::io::{BufRead, BufReader};
+use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 fn check_uncommitted_changes() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,7 +33,6 @@ fn push_to_remote() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-
     let github_token = std::env::var("GITHUB_TOKEN").expect("no gh key");
     let anthropic_key = std::env::var("ANTHROPIC_KEY").expect("no anthropic key");
 
@@ -130,7 +130,7 @@ async fn create_pull_request(
     description: &str,
     _github_token: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut child = Command::new("gh")
+    let child = Command::new("gh")
         .args(&[
             "pr",
             "create",
@@ -141,31 +141,29 @@ async fn create_pull_request(
             "--base",
             "master",
         ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .exec();
 
-    // let stdout = child.stdout.take().expect("Failed to capture stdout");
-    let stderr = child.stderr.take().expect("Failed to capture stderr");
-
-    // let stdout_reader = BufReader::new(stdout);
-    let stderr_reader = BufReader::new(stderr);
-
-    // for line in stdout_reader.lines() {
-    //     println!("{}", line?);
+    // // let stdout = child.stdout.take().expect("Failed to capture stdout");
+    // let stderr = child.stderr.take().expect("Failed to capture stderr");
+    //
+    // // let stdout_reader = BufReader::new(stdout);
+    // let stderr_reader = BufReader::new(stderr);
+    //
+    // // for line in stdout_reader.lines() {
+    // //     println!("{}", line?);
+    // // }
+    //
+    // for line in stderr_reader.lines() {
+    //     eprintln!("{}", line?);
     // }
-
-    for line in stderr_reader.lines() {
-        eprintln!("{}", line?);
-    }
-
-    let status = child.wait()?;
-
-    if status.success() {
-        println!("Pull request created successfully!");
-    } else {
-        println!("Failed to create pull request. Exit code: {}", status);
-    }
+    //
+    // let status = child.wait()?;
+    //
+    // if status.success() {
+    //     println!("Pull request created successfully!");
+    // } else {
+    //     println!("Failed to create pull request. Exit code: {}", status);
+    // }
 
     Ok(())
 }
