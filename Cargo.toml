@@ -1,0 +1,13 @@
+[package]
+name = "pullrequest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+openai = "1.0.0-alpha.16"
+reqwest = "0.12.7"
+serde_json = "1.0.128"
+
+[[bin]]
+name = "pullrequest"
+path = "./src/main.rs"
