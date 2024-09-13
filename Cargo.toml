@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-openai = "1.0.0-alpha.16"
-reqwest = "0.12.7"
+anthropic = "0.0.8"
+dotenv = "0.15.0"
+reqwest = { version = "0.12.7", features = ["blocking", "json"] }
 serde_json = "1.0.128"
+tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 
 [[bin]]
 name = "pullrequest"
