@@ -28,16 +28,17 @@ fn check_uncommitted_changes() -> Result<(), anyhow::Error> {
 fn push_to_remote(current_branch: &str) -> Result<(), anyhow::Error> {
     let status = Command::new("git")
         .args(&["push", "origin", current_branch])
-        .status()?;
+        .spawn()
+        .expect("Could not push");
 
-    if !status.success() {
-        eprintln!(
-            "{}",
-            "Failed to push to remote. Please ensure your branch is up to date with origin."
-                .bright_red()
-        );
-        std::process::exit(1);
-    }
+    // if !status.success() {
+    //     eprintln!(
+    //         "{}",
+    //         "Failed to push to remote. Please ensure your branch is up to date with origin."
+    //             .bright_red()
+    //     );
+    //     std::process::exit(1);
+    // }
 
     Ok(())
 }
@@ -118,6 +119,8 @@ async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
     // let github_token = std::env::var("GITHUB_TOKEN").expect("no gh key");
     let anthropic_key = std::env::var("ANTHROPIC_KEY").expect("no anthropic key");
+
+    check_uncommitted_changes()?;
 
     println!("{}", "Starting pullrequest process...".blue().bold());
 
