@@ -1,8 +1,7 @@
 use anthropic::{client::ClientBuilder, types::CompleteRequestBuilder, AI_PROMPT, HUMAN_PROMPT};
 use dotenv::dotenv;
-use std::io::{BufRead, BufReader};
 use std::os::unix::process::CommandExt;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 fn check_uncommitted_changes() -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new("git")
@@ -17,9 +16,9 @@ fn check_uncommitted_changes() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn push_to_remote() -> Result<(), Box<dyn std::error::Error>> {
+fn push_to_remote(current_branch: &str) -> Result<(), Box<dyn std::error::Error>> {
     let status = Command::new("git")
-        .args(&["push", "origin", "HEAD"])
+        .args(&["push", "origin", current_branch])
         .status()?;
 
     if !status.success() {
@@ -28,6 +27,39 @@ fn push_to_remote() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn check_for_remote() -> Result<(), Box<dyn std::error::Error>> {
+    // Get the current branch name
+    let current_branch = get_current_branch()?;
+
+    // Check if the branch has a remote
+    if !has_remote(&current_branch)? {
+        // If no remote, push to origin
+        push_to_remote(&current_branch)?;
+    }
+
+    Ok(())
+}
+
+fn get_current_branch() -> Result<String, Box<dyn std::error::Error>> {
+    let output = Command::new("git")
+        .args(&["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    } else {
+        Err("Failed to get current branch".into())
+    }
+}
+
+fn has_remote(branch: &str) -> Result<bool, Box<dyn std::error::Error>> {
+    let output = Command::new("git")
+        .args(&["ls-remote", "--exit-code", "--heads", "origin", branch])
+        .output()?;
+
+    Ok(output.status.success())
 }
 
 #[tokio::main]
@@ -39,8 +71,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Check for uncommitted changes
     check_uncommitted_changes()?;
 
+    check_for_remote()?;
+
     // Push to remote
-    push_to_remote()?;
+    push_to_remote(&get_current_branch()?)?;
 
     // Get the git diff
     let diff = get_git_diff()?;
@@ -130,7 +164,7 @@ async fn create_pull_request(
     description: &str,
     _github_token: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let child = Command::new("gh")
+    Command::new("gh")
         .args(&[
             "pr",
             "create",
@@ -142,28 +176,6 @@ async fn create_pull_request(
             "master",
         ])
         .exec();
-
-    // // let stdout = child.stdout.take().expect("Failed to capture stdout");
-    // let stderr = child.stderr.take().expect("Failed to capture stderr");
-    //
-    // // let stdout_reader = BufReader::new(stdout);
-    // let stderr_reader = BufReader::new(stderr);
-    //
-    // // for line in stdout_reader.lines() {
-    // //     println!("{}", line?);
-    // // }
-    //
-    // for line in stderr_reader.lines() {
-    //     eprintln!("{}", line?);
-    // }
-    //
-    // let status = child.wait()?;
-    //
-    // if status.success() {
-    //     println!("Pull request created successfully!");
-    // } else {
-    //     println!("Failed to create pull request. Exit code: {}", status);
-    // }
 
     Ok(())
 }
